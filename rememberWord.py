@@ -9,6 +9,7 @@ import random
 import math
 import json
 import enchant
+import platform
 from PyQt5.QtCore import QTimer, QUrl, QEvent, Qt, QCoreApplication, QMetaObject, pyqtSignal
 from PyQt5.QtGui import QPalette
 from PyQt5.QtCore import QRectF, Qt, QPropertyAnimation, pyqtProperty, \
@@ -18,13 +19,14 @@ from PyQt5.QtGui import QPainter, QPainterPath, QColor, QPen, QFont, QPalette
 from PyQt5.QtWidgets import QLabel, QWidget, QVBoxLayout, QApplication,\
     QLineEdit, QPushButton, QListWidget, QMainWindow, QGraphicsDropShadowEffect, QMenu, QActionGroup,\
     QFormLayout, QSizePolicy, QSizePolicy, QFormLayout, QSpacerItem, QDoubleSpinBox, QHBoxLayout,\
-    QRadioButton, QGroupBox, QFormLayout, QSpinBox, QColorDialog, QFileDialog
+    QRadioButton, QGroupBox, QFormLayout, QSpinBox, QColorDialog, QFileDialog, QSlider
 from PyQt5.QtWebEngineWidgets import QWebEnginePage, QWebEngineView, QWebEngineSettings
 from PyQt5.QtWebEngineCore import QWebEngineHttpRequest, QWebEngineUrlRequestInterceptor
 
 # 全局设置
-setting = {"engine": "baidu", "color": 0x00BFFF, "changeTime": 3.0, "fontSize": 10, "wordPath": r"/home/administrator/world.txt"}
-# 动画组
+setting = {"engine": "baidu", "color": 0x00BFFF, "changeTime": 3.0, "fontSize": 12, "fontColor": 0xffffff,
+           "wordPath": r"/home/administrator/world.txt", "opacity":80}
+# 当前活跃视图
 views = None
 # 拦截器
 class WebEngineUrlRequestInterceptor(QWebEngineUrlRequestInterceptor):
@@ -90,7 +92,7 @@ class CustomAnimation(QWidget):
         # 透明度动画
         opacityAnimation = QPropertyAnimation(self, b"windowOpacity")
         opacityAnimation.setStartValue(0.0)
-        opacityAnimation.setEndValue(0.9)
+        opacityAnimation.setEndValue(setting["opacity"])
         # 设置动画曲线
         opacityAnimation.setEasingCurve(QEasingCurve.InQuad)
         opacityAnimation.setDuration(300)  # 在0.3秒的时间内完成
@@ -114,7 +116,7 @@ class CustomAnimation(QWidget):
                         self.mainWidget.pos().y() + self.mainWidget.height())
         # 透明度动画
         opacityAnimation = QPropertyAnimation(self, b"windowOpacity")
-        opacityAnimation.setStartValue(0.8)
+        opacityAnimation.setStartValue(setting["opacity"])
         opacityAnimation.setEndValue(0.0)
         heghtAnimation = QPropertyAnimation(self, b"geometry")
         heghtAnimation.setStartValue(
@@ -156,7 +158,6 @@ class SettionWidget(CustomAnimation):
             Qt.Window | Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.X11BypassWindowManagerHint)
         # 设置一下宽度
         self.resize(self.mainWidget.width(), 250)
-        self.setWindowOpacity(0.8)  # 透明
         # 创建窗体元素
         self.verticalLayoutWidget = QWidget(self)
         self.verticalLayoutWidget.setGeometry(
@@ -172,6 +173,7 @@ class SettionWidget(CustomAnimation):
         self.verticalLayout_2.addWidget(self.label_7)
         self.formLayout = QFormLayout()
         self.formLayout.setObjectName("formLayout")
+        # 字体大小
         self.label = QLabel(self.verticalLayoutWidget)
         self.label.setObjectName("label")
         self.formLayout.setWidget(
@@ -180,14 +182,18 @@ class SettionWidget(CustomAnimation):
         self.fontSize.setObjectName("fontSize")
         self.formLayout.setWidget(
             2, QFormLayout.FieldRole, self.fontSize)
-        self.label_2 = QLabel(self.verticalLayoutWidget)
-        self.label_2.setObjectName("label_2")
-        self.formLayout.setWidget(
-            3, QFormLayout.LabelRole, self.label_2)
+
+        # 字体颜色
+        self.fontColorLabel = QLabel(self.verticalLayoutWidget)
+        self.fontColorLabel.setText("字体颜色")
         self.fontColor = QPushButton(self.verticalLayoutWidget)
         self.fontColor.setObjectName("fontColor")
         self.formLayout.setWidget(
             3, QFormLayout.FieldRole, self.fontColor)
+        self.formLayout.setWidget(
+            3, QFormLayout.LabelRole, self.fontColorLabel)
+
+        # 单词表地址
         self.label_3 = QLabel(self.verticalLayoutWidget)
         self.label_3.setObjectName("label_3")
         self.formLayout.setWidget(
@@ -199,6 +205,8 @@ class SettionWidget(CustomAnimation):
             4, QFormLayout.FieldRole, self.wordPathEdit)
         self.label_4 = QLabel(self.verticalLayoutWidget)
         self.label_4.setObjectName("label_4")
+
+        # 翻译引擎
         self.formLayout.setWidget(
             5, QFormLayout.LabelRole, self.label_4)
         self.groupBox = QGroupBox(self.verticalLayoutWidget)
@@ -213,21 +221,46 @@ class SettionWidget(CustomAnimation):
         self.googleRedio.setObjectName("googleRedio")
         self.formLayout.setWidget(
             5, QFormLayout.FieldRole, self.groupBox)
+
+        # 切换时间设置
         self.label_5 = QLabel(self.verticalLayoutWidget)
         self.label_5.setObjectName("label_5")
         self.formLayout.setWidget(
             6, QFormLayout.LabelRole, self.label_5)
-        self.horizontalLayout_2 = QHBoxLayout()
-        self.horizontalLayout_2.setObjectName("horizontalLayout_2")
         self.changeTimeEdit = QDoubleSpinBox(
             self.verticalLayoutWidget)
+        self.changeTimeEdit.setSingleStep(0.5)
+        self.changeTimeEdit.setSuffix(" 分钟")
         self.changeTimeEdit.setObjectName("changeTimeEdit")
-        self.horizontalLayout_2.addWidget(self.changeTimeEdit)
-        self.label_6 = QLabel(self.verticalLayoutWidget)
-        self.label_6.setObjectName("label_6")
-        self.horizontalLayout_2.addWidget(self.label_6)
-        self.formLayout.setLayout(
-            6, QFormLayout.FieldRole, self.horizontalLayout_2)
+        self.formLayout.setWidget(
+            6, QFormLayout.FieldRole, self.changeTimeEdit)
+        
+        # 背景颜色
+        self.backgroundLabel = QLabel(self.verticalLayoutWidget)
+        self.backgroundLabel.setObjectName("backgroundLabel")
+        self.formLayout.setWidget(
+            7, QFormLayout.LabelRole, self.backgroundLabel)
+        self.backgroundColor = QPushButton(self.verticalLayoutWidget)
+        self.backgroundColor.setObjectName("fontColor")
+        self.formLayout.setWidget(
+            7, QFormLayout.FieldRole, self.backgroundColor)
+
+        # 透明度
+        self.Opacitylabel = QLabel(self.verticalLayoutWidget)
+        self.Opacitylabel.setText("透明度")
+        self.Opacitylabel.setObjectName("Opacitylabel")
+        self.formLayout.setWidget(
+            8, QFormLayout.LabelRole, self.Opacitylabel)
+
+        self.Opacityslider = QSlider(
+            self.verticalLayoutWidget)
+        self.Opacityslider.setOrientation(Qt.Horizontal)
+        self.Opacityslider.setMaximum(100)
+        self.Opacityslider.setMinimum(20)
+        self.Opacityslider.setSingleStep(1)
+        self.formLayout.setWidget(
+            8, QFormLayout.FieldRole, self.Opacityslider)
+
         spacerItem = QSpacerItem(
             20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
         self.formLayout.setItem(0, QFormLayout.FieldRole, spacerItem)
@@ -259,11 +292,41 @@ class SettionWidget(CustomAnimation):
         self.baiduRadio.clicked.connect(lambda v: self.changeConfig("engine","baidu"))
         self.googleRedio.clicked.connect(
             lambda v: self.changeConfig("engine", "google"))
-        self.fontColor.clicked.connect(self.changeColor)
         self.wordPathEdit.clicked.connect(self.changeFilePath)
+        self.fontColor.clicked.connect(lambda v: self.changeColor("fontColor"))
+        self.backgroundColor.clicked.connect(
+            lambda v: self.changeColor("color"))
+        self.Opacityslider.valueChanged.connect(
+            lambda value: self.changeConfig("opacity",value/100.0))
         # self.fontSize.changeEvent.connect(lambda var: self.changeConfig("fontSize",var))
         # self.fontSize.changeEvent.connect(lambda var: self.changeConfig("fontSize",var))
 
+
+    def paintEvent(self, event):
+        self.setWindowOpacity(setting["opacity"])  # 透明
+        # 字体相关设置
+        ft = QFont()
+        ft.setPointSize(setting["fontSize"])
+        self.label_7.setFont(ft)
+        pa = QPalette()
+        pa.setColor(QPalette.WindowText, QColor(setting["fontColor"]))
+        self.label_7.setPalette(pa)
+        # 头设置
+        palette = self.label_7.palette()  # 调色板
+        palette.setColor(self.label_7.backgroundRole(),
+                         QColor(setting['color']))
+        palette.setBrush(QPalette.Base, Qt.transparent)  # 父控件背景透明
+        self.label_7.setAutoFillBackground(True)
+        self.label_7.setPalette(palette)
+
+ 
+
+        # 按钮设置
+        palette = self.pushButton.palette()
+        palette.setColor(self.label_7.backgroundRole(),
+                         QColor(setting['color']))
+        palette.setBrush(QPalette.Base, Qt.transparent)  # 父控件背景透明
+        self.pushButton.setPalette(palette)
     def changeFilePath(self):
         fd = QFileDialog(self)
         fd.setWindowTitle("选择生词表")
@@ -275,19 +338,22 @@ class SettionWidget(CustomAnimation):
         if(fd.exec()):
             ls =  fd.selectedFiles()
             self.changeConfig("wordPath", ls[0])
-    def changeColor(self):
-        color = QColorDialog.getColor(QColor(setting['color']))
+    def changeColor(self,key):
+        color = QColorDialog.getColor(QColor(setting[key]))
         if(color.isValid()):
             # pass
-            self.changeConfig("color", color.rgb())
+            self.changeConfig(key, color.rgb())
     def changeConfig(self,key,value):
         setting[key] = value
         saveConfig()
+        self.mainWidget.update()
+        self.update()
     def show(self):
         super(SettionWidget, self).show()
         self.fontSize.setValue(setting["fontSize"])
         self.changeTimeEdit.setValue(setting["changeTime"])
         self.wordPathEdit.setText(setting["wordPath"])
+        self.Opacityslider.setValue(setting["opacity"]*100)
         if(setting['engine']=='baidu'):
             self.baiduRadio.setChecked(True)
         elif setting['engine'] == 'google':
@@ -308,30 +374,16 @@ class SettionWidget(CustomAnimation):
         self.setWindowTitle(_translate("Form", "Form"))
         self.label_7.setText(_translate("Form", "设置"))
         self.label.setText(_translate("Form", "字体大小"))
-        self.label_2.setText(_translate("Form", "字体颜色"))
+        self.backgroundLabel.setText(_translate("Form", "背景颜色"))
         self.fontColor.setText(_translate("Form", "选择"))
+        self.backgroundColor.setText(_translate("Form", "选择"))
         self.label_3.setText(_translate("Form", "生词表"))
         self.label_4.setText(_translate("Form", "翻译引擎"))
         self.baiduRadio.setText(_translate("Form", "百度"))
         self.googleRedio.setText(_translate("Form", "谷歌"))
         self.label_5.setText(_translate("Form", "切换时间"))
-        self.label_6.setText(_translate("Form", "分钟"))
         self.pushButton.setText(_translate("Form", "关闭"))
         
-        # 头设置
-        palette = self.label_7.palette()  # 调色板
-        palette.setColor(self.label_7.backgroundRole(), QColor(setting['color']))
-        palette.setBrush(QPalette.Base, Qt.transparent)  # 父控件背景透明
-        self.label_7.setAutoFillBackground(True)
-        self.label_7.setPalette(palette)
-
-        # 按钮设置
-        palette = self.pushButton.palette()
-        palette.setColor(self.label_7.backgroundRole(),
-                         QColor(setting['color']))
-        palette.setBrush(QPalette.Base, Qt.transparent)  # 父控件背景透明
-        # self.pushButton.setAutoFillBackground(True)
-        self.pushButton.setPalette(palette)
 
 class TranslateWidget(CustomAnimation):
     def __init__(self, *args, **kwargs):
@@ -343,7 +395,7 @@ class TranslateWidget(CustomAnimation):
             Qt.Window | Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.X11BypassWindowManagerHint)
         # 设置一下宽度
         self.resize(self.mainWidget.width(),250)
-        self.setWindowOpacity(0.8) #透明
+        self.setWindowOpacity(setting["opacity"])  # 透明
         #创建关闭翻译控件的定时器
         self.closeTimer = QTimer(self, timeout=self.stop)
         self.loadWidget = QSvgWidget(
@@ -426,11 +478,6 @@ class MainWidget( QMainWindow):
     def __init__(self, *args, **kwargs):
         super(MainWidget, self).__init__(*args, **kwargs)
         self.setWindowFlags(Qt.Window | Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.X11BypassWindowManagerHint)
-        self.setWindowOpacity(0.7) #透明
-        palette = self.palette() #调色板
-        palette.setColor(self.backgroundRole(), QColor(setting['color']))
-        palette.setBrush(QPalette.Base, Qt.transparent)  # 父控件背景透明
-        self.setPalette(palette)
 
         # 获取桌面信息
         self._desktop = QApplication.instance().desktop()
@@ -444,18 +491,12 @@ class MainWidget( QMainWindow):
         # 单词设置
         self.label = QLabel(self)
 
-        ft = QFont()
-        ft.setPointSize(12)
-        pa = QPalette()
-        pa.setColor(QPalette.WindowText,Qt.white)
-        self.label.setPalette(pa)
+       
         self.label.setFixedWidth(self.width())
         self.label.setFixedHeight(self.height())
         self.label.setAlignment(Qt.AlignCenter) # 居中
         self.label.setWordWrap(False) # 不允许换行
-        self.label.setFont(ft)
         self.label.setText("start...")
-        self.label.setParent
         self.changeWord()
 
         # 菜单设置
@@ -475,7 +516,20 @@ class MainWidget( QMainWindow):
             lambda v: SettionWidget(mainWidget=self).show())
         self.exitAction.triggered.connect(lambda v: QApplication.exit())
         self.nextAction.triggered.connect(lambda v: self.changeWord())
+    def paintEvent(self,event):
+        self.setWindowOpacity(setting["opacity"])  # 透明
+        ft = QFont()
+        ft.setPointSize(setting["fontSize"])
+        pa = QPalette()
+        pa.setColor(QPalette.WindowText, QColor(setting["fontColor"]))
+        self.label.setFont(ft)
+        self.label.setPalette(pa)
 
+        palette = self.palette()  # 调色板
+        palette.setColor(self.backgroundRole(), QColor(setting['color']))
+        palette.setBrush(QPalette.Base, Qt.transparent)  # 父控件背景透明
+        self.setPalette(palette)
+        pass
     def set(self,key,value):
         setting[key] = value
     # 显示右键菜单
@@ -584,7 +638,7 @@ class MainWidget( QMainWindow):
                 if(views != None and hasattr(self, "translateWidget") and hasattr(self.translateWidget, "closeTimer")):
                     # 开始定时任务
                     self.translateWidget.closeTimer.start(1500)
-        except e:
+        except:
             pass
         return QMainWindow.eventFilter(self,  source,  event)
         
@@ -593,6 +647,10 @@ class MainWidget( QMainWindow):
         self.word = word
         self._wordLable.setText(self.word)
 
+    # 显示粘贴板
+    def showClipBoard(self):
+        print("调用粘贴办")
+        pass
     # 监控粘贴班变化
     def onClipboradChanged(self):
         clipboard = QApplication.clipboard()
@@ -605,7 +663,6 @@ class MainWidget( QMainWindow):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     loadConfig()
-    global setting
     if('pos' not in setting):
         setting["pos"]={"x": QApplication.instance().desktop().screenGeometry().width() * 0.8, "y": QApplication.instance().desktop().availableGeometry().height() *0.027}
     w = MainWidget()
@@ -613,4 +670,7 @@ if __name__ == "__main__":
     app.installEventFilter(w)
     clipboard = QApplication.clipboard()
     clipboard.dataChanged.connect(w.onClipboradChanged)
+    if(platform.system()=="Windows" or os.geteuid() == 0):
+        import keyboard
+        keyboard.add_hotkey('ctrl+shift+v', w.showClipBoard, suppress=False)
     sys.exit(app.exec_())
