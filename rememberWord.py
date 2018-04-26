@@ -606,7 +606,7 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     loadConfig()
     global setting
-    if(setting['pos'] == None):
+    if('pos' not in setting):
         setting["pos"]={"x": QApplication.instance().desktop().screenGeometry().width() * 0.8, "y": QApplication.instance().desktop().availableGeometry().height() *0.027}
     w = MainWidget()
     w.show()
