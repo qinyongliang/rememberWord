@@ -8,20 +8,17 @@ import linecache
 import random
 import math
 import json
-import enchant
 import platform
-from PyQt5.QtCore import QTimer, QUrl, QEvent, Qt, QCoreApplication, QMetaObject, pyqtSignal
-from PyQt5.QtGui import QPalette
-from PyQt5.QtCore import QRectF, Qt, QPropertyAnimation, pyqtProperty, \
-    QPoint, QParallelAnimationGroup, QEasingCurve, QRect, QSize, QMetaObject
-from PyQt5.QtSvg import QSvgWidget
-from PyQt5.QtGui import QPainter, QPainterPath, QColor, QPen, QFont, QPalette
-from PyQt5.QtWidgets import QLabel, QWidget, QVBoxLayout, QApplication,\
-    QLineEdit, QPushButton, QListWidget, QMainWindow, QGraphicsDropShadowEffect, QMenu, QActionGroup,\
-    QFormLayout, QSizePolicy, QSizePolicy, QFormLayout, QSpacerItem, QDoubleSpinBox, QHBoxLayout,\
-    QRadioButton, QGroupBox, QFormLayout, QSpinBox, QColorDialog, QFileDialog, QSlider
-from PyQt5.QtWebEngineWidgets import QWebEnginePage, QWebEngineView, QWebEngineSettings
-from PyQt5.QtWebEngineCore import QWebEngineHttpRequest, QWebEngineUrlRequestInterceptor
+import threading
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.QtSvg import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
+from PyQt5.QtWebEngineWidgets import *
+from PyQt5.QtWebEngineCore import *
+
 
 # 全局设置
 setting = {"engine": "baidu", "color": 0x00BFFF, "changeTime": 3.0, "fontSize": 12, "fontColor": 0xffffff,
@@ -38,8 +35,6 @@ class WebEngineUrlRequestInterceptor(QWebEngineUrlRequestInterceptor):
             b"User-Agent", b"Mozilla/5.0 (iPhone; CPU iPhone OS 10_3 like Mac OS X) AppleWebKit/602.1.50 (KHTML, like Gecko) CriOS/56.0.2924.75 Mobile/14E5239e Safari/602.1")
 # 拦截器实例
 interceptor = WebEngineUrlRequestInterceptor()
-# 单词检查工具
-wordCheck = enchant.Dict("en_US")
 # 配置目录
 configFilePath = os.environ['HOME'] + os.path.sep + ".remember.config"
 def loadConfig():
@@ -405,7 +400,6 @@ class TranslateWidget(CustomAnimation):
         self.loadWidget.load(Svg_icon_loading)
         self.loadWidget.setVisible(True)
 
-
     def loadTranslation(self):
         self.browser = QWebEngineView(self)
         self.browser.resize(self.width(),self.height())
@@ -458,20 +452,28 @@ class TranslateWidget(CustomAnimation):
         self.closeTimer.start(10000)
 
     def stop(self):
-        if(hasattr(self.mainWidget,"translateWidget")):
-            del self.mainWidget.translateWidget
-        self.closeTimer.stop()
-        self.closeTimer.deleteLater()
-        self.outAnimation(nextAction=self._close)
+        try:
+            if(hasattr(self.mainWidget,"translateWidget")):
+                del self.mainWidget.translateWidget
+            self.closeTimer.stop()
+            self.closeTimer.deleteLater()
+            self.outAnimation(nextAction=self._close)
+        except:
+            pass
 
     def _close(self):
-        self.loadWidget.close()
-        self.loadWidget.deleteLater()
-        self.browser.close()
-        self.hide()
-        self.animationGroup.stop()
-        self.close()
-        self.deleteLater()
+        try:
+            self.loadWidget.close()
+            self.loadWidget.deleteLater()
+            if(hasattr(self, "browser")):
+                self.browser.close()
+            self.hide()
+            self.animationGroup.stop()
+            self.close()
+            self.deleteLater()
+        except:
+            pass
+
 
 
 class MainWidget( QMainWindow):
@@ -516,7 +518,45 @@ class MainWidget( QMainWindow):
             lambda v: SettionWidget(mainWidget=self).show())
         self.exitAction.triggered.connect(lambda v: QApplication.exit())
         self.nextAction.triggered.connect(lambda v: self.changeWord())
-    def paintEvent(self,event):
+
+
+        # Windows 和linux使用的全局热键实现不一样。
+        # Windows 使用keyboard包，linux使用PyUserInput
+        if(platform.system() == "Windows" or os.geteuid() == 0):
+            import keyboard
+            keyboard.add_hotkey('ctrl+shift+v', self.showClipBoard, suppress=False)
+        else:
+            import pykeyboard
+            self.keyboard = pykeyboard.PyKeyboard()
+            class GlobalKeyHotEvent(pykeyboard.PyKeyboardEvent, QObject):
+                press = pyqtSignal()
+                # 按钮改变事件
+                change = pyqtSignal(set)
+                def __init__(self,hotKey):
+                    QObject.__init__(self)
+                    pykeyboard.PyKeyboardEvent.__init__(self)
+                    self.HotKey = hotKey
+                    self.nowPressKey = set()
+
+                def tap(self, keycode, character, press):
+                    if(character==None):
+                        return
+                    if(press==True):
+                        self.nowPressKey.add(character.replace("_L", "").replace("_R", ""))
+                    else:
+                        self.nowPressKey.remove(
+                            character.replace("_L", "").replace("_R", ""))
+                    if(len(self.nowPressKey)>1):
+                        self.change.emit(self.nowPressKey)
+                        self.change.emit(self.nowPressKey)
+                    if(self.HotKey == self.nowPressKey):
+                        self.press.emit()
+            g = GlobalKeyHotEvent(set(["Control","Shift","V"]))
+            g.press.connect(self.showClipBoard)
+            g.change.connect(lambda v: None)
+            threading.Thread(target = lambda: g.run()).start()
+        
+    def paintEvent(self, event):
         self.setWindowOpacity(setting["opacity"])  # 透明
         ft = QFont()
         ft.setPointSize(setting["fontSize"])
@@ -627,6 +667,12 @@ class MainWidget( QMainWindow):
 
     def eventFilter(self,  source,  event):
         try:
+            # if event.type() == QEvent.QKeyEvent:
+            #     print("按下按钮")
+            # if event.type() == QEvent.QShortcutEvent:
+            #     print("快捷键处理")
+            # if event.type() == QEvent.NonClientAreaMouseButtonPress:
+            #     print("鼠标按钮按下发生在客户端区域外")
             # 鼠标进入窗体
             global views
             if event.type() == QEvent.Enter:
@@ -656,7 +702,7 @@ class MainWidget( QMainWindow):
         clipboard = QApplication.clipboard()
         text = clipboard.text()
         # 如果是一个单词就直接弹出翻译
-        if(self.word!=text and wordCheck.check(text.lower())):
+        if(self.word != text and  text.lower().strip().isalpha()):
             self.changeWord(text)
             self.translation()
 
@@ -670,7 +716,4 @@ if __name__ == "__main__":
     app.installEventFilter(w)
     clipboard = QApplication.clipboard()
     clipboard.dataChanged.connect(w.onClipboradChanged)
-    if(platform.system()=="Windows" or os.geteuid() == 0):
-        import keyboard
-        keyboard.add_hotkey('ctrl+shift+v', w.showClipBoard, suppress=False)
     sys.exit(app.exec_())
