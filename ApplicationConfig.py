@@ -7,7 +7,7 @@ configFilePath = os.environ['HOME'] + os.path.sep + ".remember.config"
 
 class ApplicationConfig(object):
     # 全局设置
-    setting = {"engine": "baidu", "color": 0x00BFFF, "changeTime": 3.0, "fontSize": 12, "fontColor": 0xffffff,
+    setting = {"engine": "baidu", "color": '#00BFFF', "changeTime": 3.0, "fontSize": 12, "fontColor": '#ffffff',
             "wordPath": r"/home/administrator/world.txt", "opacity": 80}
     # 当前活跃视图
     views = None
@@ -15,6 +15,7 @@ class ApplicationConfig(object):
     clips = []
 
     checkWord = re.compile("^[a-z]*$", re.I)
+    key = re.compile("^[a-z1-9 ~!@#$%^&*()_+-=,.\/;'\\\[\]{}:\"\|\<\>\?        ]*$", re.I)
 
     def loadConfig():
         if(os.path.exists(configFilePath)):

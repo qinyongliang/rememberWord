@@ -31,9 +31,8 @@ class ClipWidget(CustomAnimation):
 
     def itemClicked(self,event):
         index = self.list.selectedIndexes()[0].row()
-        QApplication.clipboard().setText(ApplicationConfig.clips[index])
-        if(platform.system() == "Linux" and ApplicationConfig.checkWord.match(ApplicationConfig.clips[index])):
+        if(platform.system() == "Linux" and ApplicationConfig.key.match(ApplicationConfig.clips[index])):
             import pykeyboard
             pykeyboard.PyKeyboard().type_string(ApplicationConfig.clips[index])
+        QApplication.clipboard().setText(ApplicationConfig.clips[index])
         self.stop()
-

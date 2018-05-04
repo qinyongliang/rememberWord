@@ -21,7 +21,7 @@ from ApplicationConfig import *
 from TranslateWidget import *
 from SettionWidget import *
 from ClipWidget import *
-
+app = None
 class MainWidget( QMainWindow):
     def __init__(self, *args, **kwargs):
         super(MainWidget, self).__init__(*args, **kwargs)
@@ -58,15 +58,18 @@ class MainWidget( QMainWindow):
         self.clipAction = self.contextMenu.addAction(u"粘贴板")
         self.settingAction = self.contextMenu.addAction(u"设置")
         self.nextAction = self.contextMenu.addAction(u"下一个单词")
+        if(platform.system() == "Linux"):
+            self.installAction = self.contextMenu.addAction(u"注册到启动器")
         self.exitAction = self.contextMenu.addAction(u"退出")
     
 
         self.settingAction.triggered.connect(
             lambda v: SettionWidget(mainWidget=self).show())
         self.clipAction.triggered.connect(self.showClipBoard)
-        self.exitAction.triggered.connect(lambda v: QApplication.exit() or sys.exit())
+        self.exitAction.triggered.connect(self.close)
         self.nextAction.triggered.connect(lambda v: self.changeWord())
-
+        if(platform.system() == "Linux"):
+            self.installAction.triggered.connect(lambda v: self.install())
 
         # Windows 和linux使用的全局热键实现不一样。
         # Windows 使用keyboard包，linux使用PyUserInput
@@ -106,7 +109,27 @@ class MainWidget( QMainWindow):
             g.press.connect(self.showClipBoard)
             g.change.connect(lambda v: None)
             threading.Thread(target = lambda: g.run()).start()
+    def close(self):
+        if(ApplicationConfig.views!=None):
+            ApplicationConfig.views.stop()
+        super(MainWidget,self).close()
+        QCoreApplication.instance().quit()
         
+    def install(self):
+        content="""[Desktop Entry]
+Encoding=UTF-8
+Name=WordUtil
+Comment=小工具
+Exec=python3 {}
+Icon={}
+Categories=Application;
+Version=1.0
+Type=Application
+Terminal=false""".format(sys.path[0]+'/Main.py', sys.path[0]+'/icon.png')
+        path = os.environ['HOME'] + '/.local/share/applications/' + 'WordUtil.desktop'
+        fl = open(path, 'w')
+        fl.write(content)
+        fl.close()
     def paintEvent(self, event):
         self.setWindowOpacity(ApplicationConfig.setting["opacity"])  # 透明
         ft = QFont()
@@ -243,7 +266,7 @@ class MainWidget( QMainWindow):
     def showClipBoard(self):
         ClipWidget(mainWidget=self).show()
         pass
-    # 监控粘贴班变化
+    # 监控粘贴变化
     def onClipboradChanged(self):
         clipboard = QApplication.clipboard()
         text = clipboard.text().strip()
@@ -260,6 +283,7 @@ class MainWidget( QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    app.setQuitOnLastWindowClosed(False)
     ApplicationConfig.loadConfig()
     if('pos' not in ApplicationConfig.setting):
         ApplicationConfig.setting["pos"]={"x": QApplication.instance().desktop().screenGeometry().width() * 0.8, "y": QApplication.instance().desktop().availableGeometry().height() *0.027}

@@ -207,7 +207,7 @@ class SettionWidget(CustomAnimation):
         color = QColorDialog.getColor(QColor(ApplicationConfig.setting[key]))
         if(color.isValid()):
             # pass
-            self.changeConfig(key, color.rgb())
+            self.changeConfig(key, color.name())
 
     def changeConfig(self, key, value):
         ApplicationConfig.setting[key] = value

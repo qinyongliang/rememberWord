@@ -10,12 +10,13 @@ from ApplicationConfig import *
 
 
 # 加载动画
-Svg_icon_loading = '''<svg width="100%" height="100%" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+def Svg_icon_loading():
+    return '''<svg width="100%" height="100%" viewBox="-4 -4 80 80" xmlns="http://www.w3.org/2000/svg">
     <defs>
         <linearGradient x1="8.042%" y1="0%" x2="65.682%" y2="23.865%" id="a">
-            <stop stop-color="#03a9f4" stop-opacity="0" offset="0%"/>
-            <stop stop-color="#03a9f4" stop-opacity=".631" offset="63.146%"/>
-            <stop stop-color="#03a9f4" offset="100%"/>
+            <stop stop-color="{color}" stop-opacity="0" offset="0%"/>
+            <stop stop-color="{color}" stop-opacity=".631" offset="63.146%"/>
+            <stop stop-color="{color}" offset="100%"/>
         </linearGradient>
     </defs>
     <g fill="none" fill-rule="evenodd">
@@ -29,7 +30,7 @@ Svg_icon_loading = '''<svg width="100%" height="100%" viewBox="0 0 80 80" xmlns=
                     dur="1.5s"
                     repeatCount="indefinite" />
             </path>
-            <circle fill="#03a9f4" cx="36" cy="18" r="4">
+            <circle fill="{fontColor}" cx="36" cy="18" r="3">
                 <animateTransform
                     attributeName="transform"
                     type="rotate"
@@ -40,7 +41,7 @@ Svg_icon_loading = '''<svg width="100%" height="100%" viewBox="0 0 80 80" xmlns=
             </circle>
         </g>
     </g>
-</svg>'''.encode()
+</svg>'''.format(color=ApplicationConfig.setting["color"], fontColor=ApplicationConfig.setting['fontColor']).encode()
 
 # 拦截器实例
 interceptor = WebEngineUrlRequestInterceptor()
@@ -50,9 +51,9 @@ class TranslateWidget(CustomAnimation):
         super(TranslateWidget, self).__init__(*args, **kwargs)
         self.loadWidget = QSvgWidget(
             self, minimumHeight=self.height(), minimumWidth=self.height(), visible=False)
-        self.loadWidget.move(self.width() / 4,
-                             self.height() / 4)
-        self.loadWidget.load(Svg_icon_loading)
+        self.loadWidget.move(self.width() / 6,
+                             self.height() / 6)
+        self.loadWidget.load(Svg_icon_loading())
         self.loadWidget.setVisible(True)
 
     def loadTranslation(self):
@@ -66,6 +67,7 @@ class TranslateWidget(CustomAnimation):
         elif ApplicationConfig.setting["engine"] == "baidu":
             self.browser.load(QUrl(
                 "http://fanyi.baidu.com/translate?aldtype=16047&query=&keyfrom=baidu&smartresult=dict&lang=auto2zh#en/zh/" + self.word.lower()))
+        
         self.browser.loadFinished.connect(self.translationShow)
 
     # 显示翻译框，移除掉不用的div
@@ -92,8 +94,10 @@ class TranslateWidget(CustomAnimation):
         self.browser.page().settings().setAttribute(
             QWebEngineSettings.ShowScrollBars, False)
         self.loadWidget.hide()
-        QTimer.singleShot(500, self.browser.show)
+        QTimer.singleShot(400, self.browser.show)
 
+    def show(self):
+        super(TranslateWidget,self).show(self.loadTranslation)
 
     def stop(self):
         try:
