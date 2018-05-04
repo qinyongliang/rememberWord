@@ -1,9 +1,15 @@
 import os
 import json
 import re
-
+import platform
 # 配置目录
-configFilePath = os.environ['HOME'] + os.path.sep + ".remember.config"
+def homePath():
+    if(platform.system() == "Windows"):
+        return os.environ['HOMEPATH']
+    else:
+        return os.environ['HOME']
+
+configFilePath = homePath() + os.path.sep + ".remember.config"
 
 class ApplicationConfig(object):
     # 全局设置
