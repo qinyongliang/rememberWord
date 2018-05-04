@@ -7,8 +7,8 @@ from PyQt5.QtWebEngineCore import *
 from CustomAnimation import *
 from ApplicationConfig import *
 import platform
-
-
+import pykeyboard
+keyboard = pykeyboard.PyKeyboard()
 class ClipWidget(CustomAnimation):
     def __init__(self, *args, **kwargs):
         super(ClipWidget, self).__init__(*args, **kwargs)
@@ -31,8 +31,7 @@ class ClipWidget(CustomAnimation):
 
     def itemClicked(self,event):
         index = self.list.selectedIndexes()[0].row()
-        if(platform.system() == "Linux" and ApplicationConfig.key.match(ApplicationConfig.clips[index])):
-            import pykeyboard
-            pykeyboard.PyKeyboard().type_string(ApplicationConfig.clips[index])
+        if(ApplicationConfig.key.match(ApplicationConfig.clips[index])):
+            keyboard.type_string(ApplicationConfig.clips[index])
         QApplication.clipboard().setText(ApplicationConfig.clips[index])
         self.stop()
