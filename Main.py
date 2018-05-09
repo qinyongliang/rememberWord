@@ -278,6 +278,14 @@ Terminal=false""".format(sys.path[0]+'/Main.py', sys.path[0]+'/icon.png')
         
         # 如果是一个单词就直接弹出翻译
         if(self.word != text and text.lower().strip().isalpha() and ApplicationConfig.checkWord.match(text)):
+            # 将此单词加入生词本
+            filePath = ApplicationConfig.setting['wordPath']
+            try:
+                if(os.path.exists(filePath)):
+                    if(text not in open(filePath).read()):
+                        open(filePath, 'a+').write(text + "\n")
+            except:
+                pass
             self.changeWord(text)
             self.translation()
 
