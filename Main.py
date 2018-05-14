@@ -21,6 +21,12 @@ from ApplicationConfig import *
 from TranslateWidget import *
 from SettionWidget import *
 from ClipWidget import *
+
+try:
+    import enchant
+    wordCheck = enchant.Dict("en_US")
+except :
+    pass
 app = None
 class MainWidget( QMainWindow):
     def __init__(self, *args, **kwargs):
@@ -277,13 +283,19 @@ Terminal=false""".format(sys.path[0]+'/Main.py', sys.path[0]+'/icon.png')
         ApplicationConfig.clips.insert(0,text)
         
         # 如果是一个单词就直接弹出翻译
-        if(self.word != text and text.lower().strip().isalpha() and ApplicationConfig.checkWord.match(text)):
+        if(self.word != text):
+            if(wordCheck!=None):
+                if(not wordCheck.check(text)):
+                    return
+            else:
+                if(not ApplicationConfig.checkWord.match(text)):
+                    return
             # 将此单词加入生词本
             filePath = ApplicationConfig.setting['wordPath']
             try:
                 if(os.path.exists(filePath)):
-                    if(text not in open(filePath).read()):
-                        open(filePath, 'a+').write(text + "\n")
+                    if(text.lower() not in open(filePath).read()):
+                        open(filePath, 'a+').write(text.lower() + "\n")
             except:
                 pass
             self.changeWord(text)
