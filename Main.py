@@ -285,7 +285,7 @@ Terminal=false""".format(sys.path[0]+'/Main.py', sys.path[0]+'/icon.png')
         # 如果是一个单词就直接弹出翻译
         if(self.word != text):
             if(wordCheck!=None):
-                if(not wordCheck.check(text)):
+                if(not ApplicationConfig.checkWord.match(text) or not wordCheck.check(text)):
                     return
             else:
                 if(not ApplicationConfig.checkWord.match(text)):
